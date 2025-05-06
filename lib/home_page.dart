@@ -9,12 +9,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final TextEditingController ganhoController = TextEditingController();
+  final TextEditingController uberController = TextEditingController();
+  final TextEditingController novenoveController = TextEditingController();
   final TextEditingController kmRodadosController = TextEditingController();
   final TextEditingController horasTrabalhadasController = TextEditingController();
   final TextEditingController custoController = TextEditingController();
 
-  final FocusNode ganhoFocus = FocusNode();
+  final FocusNode uberFocus = FocusNode();
+  final FocusNode novenoveFocus = FocusNode();
   final FocusNode kmFocus = FocusNode();
   final FocusNode horasFocus = FocusNode();
   final FocusNode custoFocus = FocusNode();
@@ -23,36 +25,39 @@ class _HomePageState extends State<HomePage> {
   double ganhoPorKm = 0.0;
   double ganhoPorHora = 0.0;
   double ganhoLiquido = 0.0;
-  double porcentagemLucro = 0.0;  // Variável para a porcentagem de lucro
+  double porcentagemLucro = 0.0;
+  double ganhoTotal = 0.0;
 
   @override
   void initState() {
     super.initState();
-    ganhoController.addListener(calcularResultados);
+    uberController.addListener(calcularResultados);
+    novenoveController.addListener(calcularResultados);
     kmRodadosController.addListener(calcularResultados);
     horasTrabalhadasController.addListener(calcularResultados);
     custoController.addListener(calcularResultados);
   }
 
   void calcularResultados() {
-    final double ganho = _parseToDouble(ganhoController.text);
+    final double uber = _parseToDouble(uberController.text);
+    final double novenove = _parseToDouble(novenoveController.text);
     final double kmRodados = _parseToDouble(kmRodadosController.text);
     final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
     final double custo = _parseToDouble(custoController.text);
 
+    final double ganho = uber + novenove;
+
     setState(() {
+      ganhoTotal = ganho;
       ganhoPorKm = kmRodados > 0 ? ganho / kmRodados : 0.0;
       ganhoPorHora = horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0;
       ganhoPorMinuto = horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0;
       ganhoLiquido = ganho - custo;
-      
-      // Calculando a porcentagem de lucro
-      porcentagemLucro = (ganhoLiquido / ganho) * 100;
+      porcentagemLucro = ganho > 0 ? (ganhoLiquido / ganho) * 100 : 0.0;
     });
   }
 
   double _parseToDouble(String value) {
-    // Substitui a vírgula por ponto e tenta converter para double
     value = value.replaceAll(',', '.');
     return double.tryParse(value) ?? 0.0;
   }
@@ -63,7 +68,7 @@ class _HomePageState extends State<HomePage> {
 
     final data = {
       'data': dateFormat.format(now),
-      'ganho': _parseToDouble(ganhoController.text), // <- aqui está a correção
+      'ganho': ganhoTotal,
       'ganhoKm': ganhoPorKm,
       'ganhoHora': ganhoPorHora,
       'ganhoMinuto': ganhoPorMinuto,
@@ -102,9 +107,29 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildTextField(controller: ganhoController, label: 'Ganho (R\$)', focusNode: ganhoFocus),
-              _buildTextField(controller: kmRodadosController, label: 'Km Rodados', focusNode: kmFocus),
-              _buildTextField(controller: horasTrabalhadasController, label: 'Horas Trabalhadas', focusNode: horasFocus),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField(controller: uberController, label: 'Uber (R\$)', focusNode: uberFocus)),
+                  SizedBox(width: 16),
+                  Expanded(child: _buildTextField(controller: novenoveController, label: '99 (R\$)', focusNode: novenoveFocus)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  'Ganho Total: R\$ ${ganhoTotal.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField(controller: kmRodadosController, label: 'Km Rodados', focusNode: kmFocus)),
+                  SizedBox(width: 16),
+                  Expanded(child: _buildTextField(controller: horasTrabalhadasController, label: 'Horas Trabalhadas', focusNode: horasFocus)),
+                ],
+              ),
+              const SizedBox(height: 16),
               _buildTextField(controller: custoController, label: 'Custo (R\$)', focusNode: custoFocus),
               const SizedBox(height: 24),
               Wrap(
@@ -200,10 +225,10 @@ class _HomePageState extends State<HomePage> {
           }
           break;
         case 'Ganho Líquido':
-          if (valor >= 200.00) {
+          if (porcentagemLucro > 45) {
             corFundo = Colors.green.shade100;
             corTexto = Colors.green;
-          } else if (valor >= 135.00) {
+          } else if (porcentagemLucro >= 40) {
             corFundo = Colors.yellow.shade100;
             corTexto = Colors.orange;
           } else {
@@ -214,20 +239,6 @@ class _HomePageState extends State<HomePage> {
         default:
           corFundo = Colors.grey.shade200;
           corTexto = Colors.black;
-      }
-    }
-
-    // Cálculo do lucro como porcentagem para determinar a cor do card "Ganho Líquido"
-    if (isLiquido) {
-      if (porcentagemLucro > 45) {
-        corFundo = Colors.green.shade100;
-        corTexto = Colors.green;
-      } else if (porcentagemLucro >= 40) {
-        corFundo = Colors.yellow.shade100;
-        corTexto = Colors.orange;
-      } else {
-        corFundo = Colors.red.shade100;
-        corTexto = Colors.red;
       }
     }
 
