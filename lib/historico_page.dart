@@ -175,42 +175,51 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
             child: Card(
               margin: EdgeInsets.all(8),
               color: isSelecionado ? Colors.blue.shade100 : null,
-              child: ListTile(
-                title: Text(item['data']),
-                subtitle: Column(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          item['data'],
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        Text(
+                          'R\$ ${formatarValor(item['ganho'])}',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
                     Container(
                       color: getCorParaValor(item['ganhoKm'], 2.00, 1.70),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(4),
                       child: Text('Ganho por KM: R\$ ${formatarValor(item['ganhoKm'])}'),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2.0),
-                      child: Text('Ganho: R\$ ${formatarValor(item['ganho'])}'),
                     ),
                     Container(
                       color: getCorParaValor(item['ganhoHora'], 40.0, 35.0),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(4),
                       child: Text('Ganho por Hora: R\$ ${formatarValor(item['ganhoHora'])}'),
                     ),
                     Container(
                       color: getCorParaValor(item['ganhoMinuto'], 1.0, 0.75),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(4),
                       child: Text('Ganho por Minuto: R\$ ${formatarValor(item['ganhoMinuto'])}'),
                     ),
                     Container(
                       color: getCorParaValor(item['ganhoLiquido'], 200.0, 135.0),
+                      width: double.infinity,
+                      padding: EdgeInsets.all(4),
                       child: Text('Ganho Líquido: R\$ ${formatarValor(item['ganhoLiquido'])}'),
                     ),
                   ],
                 ),
-                trailing: selecionados.isEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _confirmarExclusao(context, [item['id']]),
-                      )
-                    : Icon(
-                        isSelecionado ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: isSelecionado ? Colors.blue : null,
-                      ),
               ),
             ),
           );
