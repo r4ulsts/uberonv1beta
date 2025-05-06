@@ -23,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   double ganhoPorKm = 0.0;
   double ganhoPorHora = 0.0;
   double ganhoLiquido = 0.0;
+  double porcentagemLucro = 0.0;  // Variável para a porcentagem de lucro
 
   @override
   void initState() {
@@ -34,24 +35,28 @@ class _HomePageState extends State<HomePage> {
   }
 
   void calcularResultados() {
-  final double ganho = _parseToDouble(ganhoController.text);
-  final double kmRodados = _parseToDouble(kmRodadosController.text);
-  final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
-  final double custo = _parseToDouble(custoController.text);
+    final double ganho = _parseToDouble(ganhoController.text);
+    final double kmRodados = _parseToDouble(kmRodadosController.text);
+    final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
+    final double custo = _parseToDouble(custoController.text);
 
-  setState(() {
-    ganhoPorKm = kmRodados > 0 ? ganho / kmRodados : 0.0;
-    ganhoPorHora = horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0;
-    ganhoPorMinuto = horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0;
-    ganhoLiquido = ganho - custo;
-  });
-}
+    setState(() {
+      ganhoPorKm = kmRodados > 0 ? ganho / kmRodados : 0.0;
+      ganhoPorHora = horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0;
+      ganhoPorMinuto = horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0;
+      ganhoLiquido = ganho - custo;
+      
+      // Calculando a porcentagem de lucro
+      porcentagemLucro = (ganhoLiquido / ganho) * 100;
+    });
+  }
 
-double _parseToDouble(String value) {
-  // Substitui a vírgula por ponto e tenta converter para double
-  value = value.replaceAll(',', '.');
-  return double.tryParse(value) ?? 0.0;
-}
+  double _parseToDouble(String value) {
+    // Substitui a vírgula por ponto e tenta converter para double
+    value = value.replaceAll(',', '.');
+    return double.tryParse(value) ?? 0.0;
+  }
+
   void _salvarHistorico() {
     final now = DateTime.now();
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
@@ -208,6 +213,20 @@ double _parseToDouble(String value) {
         default:
           corFundo = Colors.grey.shade200;
           corTexto = Colors.black;
+      }
+    }
+
+    // Cálculo do lucro como porcentagem para determinar a cor do card "Ganho Líquido"
+    if (isLiquido) {
+      if (porcentagemLucro > 45) {
+        corFundo = Colors.green.shade100;
+        corTexto = Colors.green;
+      } else if (porcentagemLucro >= 40) {
+        corFundo = Colors.yellow.shade100;
+        corTexto = Colors.orange;
+      } else {
+        corFundo = Colors.red.shade100;
+        corTexto = Colors.red;
       }
     }
 
