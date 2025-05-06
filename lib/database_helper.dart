@@ -19,10 +19,16 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'historico.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Versão atualizada
       onCreate: _onCreate,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE historico ADD COLUMN ganho REAL');
+        }
+      },
     );
   }
+
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE historico(
@@ -31,7 +37,8 @@ class DatabaseHelper {
         ganhoKm REAL,
         ganhoHora REAL,
         ganhoMinuto REAL,
-        ganhoLiquido REAL
+        ganhoLiquido REAL,
+        ganho REAL
       )
     ''');
   }
@@ -40,14 +47,16 @@ class DatabaseHelper {
     final db = await database;
     await db.insert('historico', historico);
   }
-Future<void> limparHistorico() async {
-  final db = await database;
-  await db.delete('historico');
-}
+
+  Future<void> limparHistorico() async {
+    final db = await database;
+    await db.delete('historico');
+  }
+
   Future<void> deletarHistorico(int id) async {
-  final db = await database;
-  await db.delete('historico', where: 'id = ?', whereArgs: [id]);
-}
+    final db = await database;
+    await db.delete('historico', where: 'id = ?', whereArgs: [id]);
+  }
 
   Future<List<Map<String, dynamic>>> listarHistorico() async {
     final db = await database;

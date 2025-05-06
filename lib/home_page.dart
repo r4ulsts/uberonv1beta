@@ -63,6 +63,7 @@ class _HomePageState extends State<HomePage> {
 
     final data = {
       'data': dateFormat.format(now),
+      'ganho': _parseToDouble(ganhoController.text), // <- aqui está a correção
       'ganhoKm': ganhoPorKm,
       'ganhoHora': ganhoPorHora,
       'ganhoMinuto': ganhoPorMinuto,
