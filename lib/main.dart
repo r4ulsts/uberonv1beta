@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart'; // Aponta para a versão principal (não dev)
+import 'home_page.dart';
 
 void main() {
   runApp(UberON());
