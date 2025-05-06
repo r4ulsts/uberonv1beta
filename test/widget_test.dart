@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:uberonv1beta/main.dart';
+import 'package:uberonv1beta/main.dart'; // Aponte para o arquivo main
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(HomePage()); // Altere UberON para HomePage.
+    // Construa o aplicativo com a estrutura do MaterialApp.
+    await tester.pumpWidget(UberON()); // Usando o UberON como a entrada.
 
     // Verifique se o contador começa em 0.
     expect(find.text('0'), findsOneWidget);

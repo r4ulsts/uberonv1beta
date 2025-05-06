@@ -6,12 +6,12 @@ import 'package:pdf/pdf.dart';
 
 class HistoricoPage extends StatefulWidget {
   @override
-  _HistoricoPageState createState() => _HistoricoPageState();
+  _HistoricoPageDevState createState() => _HistoricoPageDevState();
 }
 
-class _HistoricoPageState extends State<HistoricoPage> {
+class _HistoricoPageDevState extends State<HistoricoPage> {
   List<Map<String, dynamic>> historico = [];
-  List<int> selecionados = []; // IDs dos itens selecionados
+  List<int> selecionados = [];
 
   @override
   void initState() {
@@ -70,15 +70,29 @@ class _HistoricoPageState extends State<HistoricoPage> {
     }
   }
 
-  // 🔵 Função para gerar e compartilhar o PDF apenas dos registros selecionados
+  String formatarValor(dynamic valor) {
+    if (valor is num) return valor.toStringAsFixed(2);
+    return '0.00';
+  }
+
+  void alternarSelecao(int id) {
+    setState(() {
+      if (selecionados.contains(id)) {
+        selecionados.remove(id);
+      } else {
+        selecionados.add(id);
+      }
+    });
+  }
+
   Future<void> compartilharHistorico() async {
     final pdf = pw.Document();
-
-    // Filtrando apenas os registros selecionados
     final historicoSelecionado = historico.where((item) => selecionados.contains(item['id'])).toList();
 
     if (historicoSelecionado.isEmpty) {
-      // Se não houver nenhum registro selecionado, retornamos sem gerar o PDF
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Nenhum registro selecionado para compartilhar')),
+      );
       return;
     }
 
@@ -102,19 +116,15 @@ class _HistoricoPageState extends State<HistoricoPage> {
                     ],
                   ),
                   ...historicoSelecionado.map(
-                    (item) {
-                      final dataFormatada = item['data']; // Se necessário, formate aqui
-
-                      return pw.TableRow(
-                        children: [
-                          pw.Text(dataFormatada),
-                          pw.Text(item['ganhoKm'].toStringAsFixed(2)),
-                          pw.Text(item['ganhoHora'].toStringAsFixed(2)),
-                          pw.Text(item['ganhoMinuto'].toStringAsFixed(2)),
-                          pw.Text(item['ganhoLiquido'].toStringAsFixed(2)),
-                        ],
-                      );
-                    },
+                    (item) => pw.TableRow(
+                      children: [
+                        pw.Text(item['data']),
+                        pw.Text(formatarValor(item['ganhoKm'])),
+                        pw.Text(formatarValor(item['ganhoHora'])),
+                        pw.Text(formatarValor(item['ganhoMinuto'])),
+                        pw.Text(formatarValor(item['ganhoLiquido'])),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -124,7 +134,6 @@ class _HistoricoPageState extends State<HistoricoPage> {
       ),
     );
 
-    // Compartilhar o PDF gerado
     await Printing.sharePdf(
       bytes: await pdf.save(),
       filename: 'historico_selecionado.pdf',
@@ -146,7 +155,7 @@ class _HistoricoPageState extends State<HistoricoPage> {
             ),
           IconButton(
             icon: Icon(Icons.share),
-            onPressed: compartilharHistorico, // Chama a função de compartilhar
+            onPressed: compartilharHistorico,
           ),
         ],
       ),
@@ -157,24 +166,10 @@ class _HistoricoPageState extends State<HistoricoPage> {
           final isSelecionado = selecionados.contains(item['id']);
 
           return GestureDetector(
-            onLongPress: () {
-              setState(() {
-                if (isSelecionado) {
-                  selecionados.remove(item['id']);
-                } else {
-                  selecionados.add(item['id']);
-                }
-              });
-            },
+            onLongPress: () => alternarSelecao(item['id']),
             onTap: () {
               if (selecionados.isNotEmpty) {
-                setState(() {
-                  if (isSelecionado) {
-                    selecionados.remove(item['id']);
-                  } else {
-                    selecionados.add(item['id']);
-                  }
-                });
+                alternarSelecao(item['id']);
               }
             },
             child: Card(
@@ -187,28 +182,30 @@ class _HistoricoPageState extends State<HistoricoPage> {
                   children: [
                     Container(
                       color: getCorParaValor(item['ganhoKm'], 2.00, 1.70),
-                      child: Text('Ganho por KM: R\$ ${item['ganhoKm'].toStringAsFixed(2)}'),
+                      child: Text('Ganho por KM: R\$ ${formatarValor(item['ganhoKm'])}'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Text('Ganho: R\$ ${formatarValor(item['ganho'])}'),
                     ),
                     Container(
                       color: getCorParaValor(item['ganhoHora'], 40.0, 35.0),
-                      child: Text('Ganho por Hora: R\$ ${item['ganhoHora'].toStringAsFixed(2)}'),
+                      child: Text('Ganho por Hora: R\$ ${formatarValor(item['ganhoHora'])}'),
                     ),
                     Container(
                       color: getCorParaValor(item['ganhoMinuto'], 1.0, 0.75),
-                      child: Text('Ganho por Minuto: R\$ ${item['ganhoMinuto'].toStringAsFixed(2)}'),
+                      child: Text('Ganho por Minuto: R\$ ${formatarValor(item['ganhoMinuto'])}'),
                     ),
                     Container(
                       color: getCorParaValor(item['ganhoLiquido'], 200.0, 135.0),
-                      child: Text('Ganho Líquido: R\$ ${item['ganhoLiquido'].toStringAsFixed(2)}'),
+                      child: Text('Ganho Líquido: R\$ ${formatarValor(item['ganhoLiquido'])}'),
                     ),
                   ],
                 ),
                 trailing: selecionados.isEmpty
                     ? IconButton(
                         icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          _confirmarExclusao(context, [item['id']]);
-                        },
+                        onPressed: () => _confirmarExclusao(context, [item['id']]),
                       )
                     : Icon(
                         isSelecionado ? Icons.check_circle : Icons.radio_button_unchecked,

@@ -1,4 +1,3 @@
-// lib/dev/home_page_dev.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uberonv1beta/database_helper.dart';
@@ -35,30 +34,41 @@ class _HomePageState extends State<HomePage> {
   }
 
   void calcularResultados() {
-    final double ganho = double.tryParse(ganhoController.text) ?? 0.0;
-    final double kmRodados = double.tryParse(kmRodadosController.text) ?? 0.0;
-    final double horasTrabalhadas = double.tryParse(horasTrabalhadasController.text) ?? 0.0;
-    final double custo = double.tryParse(custoController.text) ?? 0.0;
+  final double ganho = _parseToDouble(ganhoController.text);
+  final double kmRodados = _parseToDouble(kmRodadosController.text);
+  final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
+  final double custo = _parseToDouble(custoController.text);
 
-    setState(() {
-      ganhoPorKm = kmRodados > 0 ? ganho / kmRodados : 0.0;
-      ganhoPorHora = horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0;
-      ganhoPorMinuto = horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0;
-      ganhoLiquido = ganho - custo;
-    });
+  setState(() {
+    ganhoPorKm = kmRodados > 0 ? ganho / kmRodados : 0.0;
+    ganhoPorHora = horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0;
+    ganhoPorMinuto = horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0;
+    ganhoLiquido = ganho - custo;
+  });
+}
 
+double _parseToDouble(String value) {
+  // Substitui a vírgula por ponto e tenta converter para double
+  value = value.replaceAll(',', '.');
+  return double.tryParse(value) ?? 0.0;
+}
+  void _salvarHistorico() {
     final now = DateTime.now();
-    final dateFormat = DateFormat('dd/MM/yyyy');
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     final data = {
       'data': dateFormat.format(now),
       'ganhoKm': ganhoPorKm,
       'ganhoHora': ganhoPorHora,
-      'ganhoMinuto': ganhoPorHora / 60,
+      'ganhoMinuto': ganhoPorMinuto,
       'ganhoLiquido': ganhoLiquido,
     };
 
     DatabaseHelper().inserirHistorico(data);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Dados salvos no histórico!')),
+    );
   }
 
   @override
@@ -66,7 +76,7 @@ class _HomePageState extends State<HomePage> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text('UberON DEV', style: textTheme.titleLarge),
+        title: Text('UberON', style: textTheme.titleLarge),
         centerTitle: true,
         actions: [
           IconButton(
@@ -95,11 +105,21 @@ class _HomePageState extends State<HomePage> {
                 spacing: 16,
                 runSpacing: 16,
                 children: [
-                  _buildResultadoCard('Ganho por Minuto', ganhoPorMinuto, tipo: 'minuto'),
-                  _buildResultadoCard('Ganho por Km', ganhoPorKm, tipo: 'km'),
-                  _buildResultadoCard('Ganho por Hora', ganhoPorHora, tipo: 'hora'),
-                  _buildResultadoCard('Ganho Líquido', ganhoLiquido, tipo: 'liquido'),
+                  _buildResultadoCard('Ganho por Minuto', ganhoPorMinuto),
+                  _buildResultadoCard('Ganho por Km', ganhoPorKm),
+                  _buildResultadoCard('Ganho por Hora', ganhoPorHora),
+                  _buildResultadoCard('Ganho Líquido', ganhoLiquido, isLiquido: true),
                 ],
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _salvarHistorico,
+                icon: Icon(Icons.save),
+                label: Text('Salvar no Histórico'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  textStyle: TextStyle(fontSize: 16),
+                ),
               ),
             ],
           ),
@@ -128,7 +148,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildResultadoCard(String titulo, double valor, {required String tipo}) {
+  Widget _buildResultadoCard(String titulo, double valor, {bool isLiquido = false}) {
     Color corFundo;
     Color corTexto;
 
@@ -136,12 +156,12 @@ class _HomePageState extends State<HomePage> {
       corFundo = Colors.blue.shade100;
       corTexto = Colors.blue;
     } else {
-      switch (tipo) {
-        case 'km':
-          if (valor >= 2.0) {
+      switch (titulo) {
+        case 'Ganho por Km':
+          if (valor >= 2.00) {
             corFundo = Colors.green.shade100;
             corTexto = Colors.green;
-          } else if (valor >= 1.7) {
+          } else if (valor >= 1.70) {
             corFundo = Colors.yellow.shade100;
             corTexto = Colors.orange;
           } else {
@@ -149,11 +169,11 @@ class _HomePageState extends State<HomePage> {
             corTexto = Colors.red;
           }
           break;
-        case 'hora':
-          if (valor >= 40.0) {
+        case 'Ganho por Hora':
+          if (valor >= 40.00) {
             corFundo = Colors.green.shade100;
             corTexto = Colors.green;
-          } else if (valor >= 35.0) {
+          } else if (valor >= 35.00) {
             corFundo = Colors.yellow.shade100;
             corTexto = Colors.orange;
           } else {
@@ -161,8 +181,8 @@ class _HomePageState extends State<HomePage> {
             corTexto = Colors.red;
           }
           break;
-        case 'minuto':
-          if (valor >= 1.0) {
+        case 'Ganho por Minuto':
+          if (valor >= 1.00) {
             corFundo = Colors.green.shade100;
             corTexto = Colors.green;
           } else if (valor >= 0.75) {
@@ -173,11 +193,11 @@ class _HomePageState extends State<HomePage> {
             corTexto = Colors.red;
           }
           break;
-        case 'liquido':
-          if (valor >= 200.0) {
+        case 'Ganho Líquido':
+          if (valor >= 200.00) {
             corFundo = Colors.green.shade100;
             corTexto = Colors.green;
-          } else if (valor >= 135.0) {
+          } else if (valor >= 135.00) {
             corFundo = Colors.yellow.shade100;
             corTexto = Colors.orange;
           } else {
