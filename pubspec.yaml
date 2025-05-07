@@ -61,7 +61,7 @@ flutter_native_splash:
   ios: false
   android_theme: "light"  # Ou "dark"
   fullscreen: true  # Torna o splash tela cheia
-  wait: 5  # Aguarda 5 segundos antes de avançar
+  wait: 1  # Aguarda 1 segundos antes de avançar
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
