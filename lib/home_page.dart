@@ -225,10 +225,10 @@ class _HomePageState extends State<HomePage> {
           }
           break;
         case 'Ganho Líquido':
-          if (porcentagemLucro > 45) {
+          if (porcentagemLucro > 70) {
             corFundo = Colors.green.shade100;
             corTexto = Colors.green;
-          } else if (porcentagemLucro >= 40) {
+          } else if (porcentagemLucro >= 65) {
             corFundo = Colors.yellow.shade100;
             corTexto = Colors.orange;
           } else {
