@@ -63,6 +63,71 @@ void _onInputChange() {
   });
 }
 
+void _resetarDados() {
+  Timer? autoResetTimer; // Declaração correta no escopo adequado
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      int segundosRestantes = 5;
+
+      return StatefulBuilder(
+        builder: (context, setState) {
+          // Inicializa o timer para atualização do botão
+          autoResetTimer ??= Timer.periodic(const Duration(seconds: 1), (timer) {
+            if (segundosRestantes > 1) {
+              if (!Navigator.of(context).canPop()) {
+                timer.cancel(); // Cancela o timer se o diálogo for fechado
+              } else {
+                setState(() => segundosRestantes--); // Atualiza o botão apenas se estiver montado
+              }
+            } else {
+              timer.cancel();
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop(); // Fecha o diálogo antes de resetar os dados
+              }
+              _limparCampos();
+            }
+          });
+
+          return AlertDialog(
+            title: Text("Confirmar Reset"),
+            content: Text("Tem certeza que deseja apagar os dados preenchidos?"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  autoResetTimer?.cancel(); // Cancela o timer para evitar erro
+                  Navigator.of(context).pop(); // Fecha o diálogo sem limpar os dados
+                },
+                child: Text("Cancelar"),
+              ),
+              TextButton(
+                onPressed: () {
+                  autoResetTimer?.cancel(); // Cancela o timer para evitar reset automático
+                  Navigator.of(context).pop();
+                  _limparCampos();
+                },
+                child: Text("Sim ($segundosRestantes)"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  ).then((_) {
+    // Garante que o timer seja cancelado ao fechar o diálogo de qualquer forma
+    autoResetTimer?.cancel();
+  });
+}
+
+/// Método para limpar os campos do formulário
+void _limparCampos() {
+  uberController.clear();
+  novenoveController.clear();
+  kmRodadosController.clear();
+  horasTrabalhadasController.clear();
+  custoController.clear();
+}
 
   void calcularResultados() {
     final double uber = _parseToDouble(uberController.text);
@@ -178,7 +243,7 @@ void _onInputChange() {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(child: _buildTextField(controller: kmRodadosController, label: 'Km Rodados', focusNode: kmFocus)),
@@ -199,7 +264,7 @@ void _onInputChange() {
                   _buildResultadoCard('Ganho Líquido', ganhoLiquido, isLiquido: true),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
               ElevatedButton.icon(
                 onPressed: _salvarHistorico,
                 icon: Icon(Icons.save),
@@ -207,6 +272,17 @@ void _onInputChange() {
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 16),
                   textStyle: TextStyle(fontSize: 16),
+                ),
+              ),
+              const SizedBox(height: 8), // Espaço entre os botões
+              ElevatedButton.icon(
+                onPressed: _resetarDados,
+                icon: Icon(Icons.refresh),
+                label: Text("Resetar Dados"),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  textStyle: TextStyle(fontSize: 16),
+                  backgroundColor: const Color.fromARGB(255, 247, 223, 10), // Cor para destacar o reset
                 ),
               ),
             ],
