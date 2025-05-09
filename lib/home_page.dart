@@ -66,16 +66,35 @@ class _HomePageState extends State<HomePage> {
     final now = DateTime.now();
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
+    final uber = _parseToDouble(uberController.text);
+    final novenove = _parseToDouble(novenoveController.text);
+    final kmRodados = _parseToDouble(kmRodadosController.text);
+    final horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
+    final custo = _parseToDouble(custoController.text);
+
+    final ganho = uber + novenove;
+
     final data = {
       'data': dateFormat.format(now),
-      'ganho': ganhoTotal,
-      'ganhoKm': ganhoPorKm,
-      'ganhoHora': ganhoPorHora,
-      'ganhoMinuto': ganhoPorMinuto,
-      'ganhoLiquido': ganhoLiquido,
+      'valorUber': uber,
+      'valor99': novenove,
+      'kmRodados': kmRodados,
+      'horasTrabalhadas': horasTrabalhadas,
+      'custo': custo,
+      'ganho': ganho,
+      'ganhoKm': kmRodados > 0 ? ganho / kmRodados : 0.0,
+      'ganhoHora': horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0,
+      'ganhoMinuto': horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0,
+      'ganhoLiquido': ganho - custo,
     };
 
     DatabaseHelper().inserirHistorico(data);
+
+    uberController.clear();
+    novenoveController.clear();
+    kmRodadosController.clear();
+    horasTrabalhadasController.clear();
+    custoController.clear();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Dados salvos no histórico!')),
@@ -114,11 +133,23 @@ class _HomePageState extends State<HomePage> {
                   Expanded(child: _buildTextField(controller: novenoveController, label: '99 (R\$)', focusNode: novenoveFocus)),
                 ],
               ),
-              const SizedBox(height: 16),
-              Center(
-                child: Text(
-                  'Ganho Total: R\$ ${ganhoTotal.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium,
+              const SizedBox(height: 1),
+              // Card para exibir o Ganho Total
+              Card(
+                color: Colors.blue.shade100,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                  child: Center(
+                    child: Text(
+                      'Ganho Total: R\$ ${ganhoTotal.toStringAsFixed(2)}',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[900],
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -129,9 +160,9 @@ class _HomePageState extends State<HomePage> {
                   Expanded(child: _buildTextField(controller: horasTrabalhadasController, label: 'Horas Trabalhadas', focusNode: horasFocus)),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 1),
               _buildTextField(controller: custoController, label: 'Custo (R\$)', focusNode: custoFocus),
-              const SizedBox(height: 24),
+              const SizedBox(height: 1),
               Wrap(
                 spacing: 16,
                 runSpacing: 16,

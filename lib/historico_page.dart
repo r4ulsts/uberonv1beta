@@ -36,7 +36,8 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: Text('Confirmar Exclusão'),
-          content: Text('Tem certeza que deseja excluir ${ids.length} registro(s)?'),
+          content:
+              Text('Tem certeza que deseja excluir ${ids.length} registro(s)?'),
           actions: [
             TextButton(
               child: Text('Cancelar'),
@@ -45,7 +46,8 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
               },
             ),
             TextButton(
-              child: Text('Excluir', style: TextStyle(color: Colors.red)),
+              child:
+                  Text('Excluir', style: TextStyle(color: Colors.red)),
               onPressed: () async {
                 for (var id in ids) {
                   await DatabaseHelper().deletarHistorico(id);
@@ -75,6 +77,17 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
     return '0.00';
   }
 
+  // Remove casas decimais desnecessárias para kmRodados e horasTrabalhadas
+  String formatarSemZeros(dynamic valor) {
+    if (valor is num) {
+      if (valor == valor.toInt()) {
+        return valor.toInt().toString();
+      }
+      return valor.toString();
+    }
+    return '';
+  }
+
   void alternarSelecao(int id) {
     setState(() {
       if (selecionados.contains(id)) {
@@ -87,11 +100,13 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
 
   Future<void> compartilharHistorico() async {
     final pdf = pw.Document();
-    final historicoSelecionado = historico.where((item) => selecionados.contains(item['id'])).toList();
+    final historicoSelecionado =
+        historico.where((item) => selecionados.contains(item['id'])).toList();
 
     if (historicoSelecionado.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Nenhum registro selecionado para compartilhar')),
+        SnackBar(
+            content: Text('Nenhum registro selecionado para compartilhar')),
       );
       return;
     }
@@ -101,28 +116,85 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
         build: (pw.Context context) {
           return pw.Column(
             children: [
-              pw.Text('Histórico de Ganhos', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.Text(
+                'Histórico de Ganhos',
+                style: pw.TextStyle(
+                    fontSize: 24, fontWeight: pw.FontWeight.bold),
+              ),
               pw.SizedBox(height: 20),
               pw.Table(
-                border: pw.TableBorder.all(width: 1, color: PdfColors.black),
+                border: pw.TableBorder.all(
+                    width: 1, color: PdfColors.black),
                 children: [
                   pw.TableRow(
                     children: [
-                      pw.Text('Data', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.Text('Ganho por KM', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.Text('Ganho por Hora', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.Text('Ganho por Minuto', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.Text('Ganho Líquido', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4.0),
+                        child: pw.Text('Data',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4.0),
+                        child: pw.Text('Ganho por KM',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4.0),
+                        child: pw.Text('Km Rodados',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4.0),
+                        child: pw.Text('Ganho por Hora',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4.0),
+                        child: pw.Text('Ganho por Minuto',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold)),
+                      ),
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(4.0),
+                        child: pw.Text('Ganho Líquido',
+                            style: pw.TextStyle(
+                                fontWeight: pw.FontWeight.bold)),
+                      ),
                     ],
                   ),
                   ...historicoSelecionado.map(
                     (item) => pw.TableRow(
                       children: [
-                        pw.Text(item['data']),
-                        pw.Text(formatarValor(item['ganhoKm'])),
-                        pw.Text(formatarValor(item['ganhoHora'])),
-                        pw.Text(formatarValor(item['ganhoMinuto'])),
-                        pw.Text(formatarValor(item['ganhoLiquido'])),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4.0),
+                          child: pw.Text(item['data']),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4.0),
+                          child: pw.Text(formatarValor(item['ganhoKm'])),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4.0),
+                          child: pw.Text(item['kmRodados'] != null
+                              ? formatarValor(item['kmRodados'])
+                              : '0'),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4.0),
+                          child: pw.Text(formatarValor(item['ganhoHora'])),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4.0),
+                          child: pw.Text(formatarValor(item['ganhoMinuto'])),
+                        ),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4.0),
+                          child: pw.Text(formatarValor(item['ganhoLiquido'])),
+                        ),
                       ],
                     ),
                   ),
@@ -164,7 +236,10 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
         itemBuilder: (context, index) {
           final item = historico[index];
           final isSelecionado = selecionados.contains(item['id']);
-
+          // Calcular os minutos a partir das horas inseridas.
+          final double horasTrabalhadas =
+              (item['horasTrabalhadas'] is num) ? item['horasTrabalhadas'] : 0;
+          final int minutosCalculados = (horasTrabalhadas * 60).toInt();
           return GestureDetector(
             onLongPress: () => alternarSelecao(item['id']),
             onTap: () {
@@ -178,45 +253,146 @@ class _HistoricoPageDevState extends State<HistoricoPage> {
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Cabeçalho: Data, Ganho Total, Uber e 99
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           item['data'],
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         Text(
                           'R\$ ${formatarValor(item['ganho'])}',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Uber: R\$ ${formatarValor(item['valorUber'])}',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                        Text(
+                          '99: R\$ ${formatarValor(item['valor99'])}',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                       ],
                     ),
                     SizedBox(height: 8),
-                    Container(
-                      color: getCorParaValor(item['ganhoKm'], 2.00, 1.70),
-                      width: double.infinity,
-                      padding: EdgeInsets.all(4),
-                      child: Text('Ganho por KM: R\$ ${formatarValor(item['ganhoKm'])}'),
+                    Divider(),
+                    SizedBox(height: 8),
+                    // Primeira tabela: Ganho por KM / Km Rodados e Ganho por Hora / Horas Trabalhadas
+                    Table(
+                      border: TableBorder.all(color: Colors.grey, width: 1),
+                      columnWidths: {
+                        0: FlexColumnWidth(1),
+                        1: FlexColumnWidth(1),
+                      },
+                      children: [
+                        TableRow(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              color:
+                                  getCorParaValor(item['ganhoKm'], 2.00, 1.70),
+                              child: Text(
+                                "Ganho por KM: R\$ ${formatarValor(item['ganhoKm'])}",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              child: Text(
+                                "Km Rodados: ${formatarSemZeros(item['kmRodados'])}",
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TableRow(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              color:
+                                  getCorParaValor(item['ganhoHora'], 40.0, 35.0),
+                              child: Text(
+                                "Ganho por Hora: R\$ ${formatarValor(item['ganhoHora'])}",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              child: Text(
+                                "Horas Trabalhadas: ${formatarSemZeros(item['horasTrabalhadas'])}",
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    Container(
-                      color: getCorParaValor(item['ganhoHora'], 40.0, 35.0),
-                      width: double.infinity,
-                      padding: EdgeInsets.all(4),
-                      child: Text('Ganho por Hora: R\$ ${formatarValor(item['ganhoHora'])}'),
-                    ),
-                    Container(
-                      color: getCorParaValor(item['ganhoMinuto'], 1.0, 0.75),
-                      width: double.infinity,
-                      padding: EdgeInsets.all(4),
-                      child: Text('Ganho por Minuto: R\$ ${formatarValor(item['ganhoMinuto'])}'),
-                    ),
-                    Container(
-                      color: getCorParaValor(item['ganhoLiquido'], 200.0, 135.0),
-                      width: double.infinity,
-                      padding: EdgeInsets.all(4),
-                      child: Text('Ganho Líquido: R\$ ${formatarValor(item['ganhoLiquido'])}'),
+                    SizedBox(height: 8),
+                    // Segunda tabela: Linha 1: Ganho por Minuto e Minutos calculados; Linha 2: Ganho Líquido e Custo.
+                    Table(
+                      border: TableBorder.all(color: Colors.grey, width: 1),
+                      columnWidths: {
+                        0: FlexColumnWidth(1),
+                        1: FlexColumnWidth(1),
+                      },
+                      children: [
+                        TableRow(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              color: getCorParaValor(
+                                  item['ganhoMinuto'], 1.0, 0.75),
+                              child: Text(
+                                "Ganho por Minuto: R\$ ${formatarValor(item['ganhoMinuto'])}",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              child: Text(
+                                "Minutos: $minutosCalculados",
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TableRow(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              color: getCorParaValor(item['ganhoLiquido'], 200.0, 135.0),
+                              child: Text(
+                                "Ganho Líquido: R\$ ${formatarValor(item['ganhoLiquido'])}",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              child: Text(
+                                "Custo: R\$ ${formatarValor(item['custo'])}",
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
