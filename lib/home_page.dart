@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uberonv1beta/database_helper.dart';
 import 'package:uberonv1beta/historico_page.dart';
+import 'dart:async';
 
 class HomePage extends StatefulWidget {
   @override
@@ -28,15 +29,40 @@ class _HomePageState extends State<HomePage> {
   double porcentagemLucro = 0.0;
   double ganhoTotal = 0.0;
 
+  Timer? _debounce; // Variável para debounce
+
+ @override
+void initState() {
+  super.initState();
+  uberController.addListener(_onInputChange);
+  novenoveController.addListener(_onInputChange);
+  kmRodadosController.addListener(_onInputChange);
+  horasTrabalhadasController.addListener(_onInputChange);
+  custoController.addListener(_onInputChange);
+}
+
   @override
-  void initState() {
-    super.initState();
-    uberController.addListener(calcularResultados);
-    novenoveController.addListener(calcularResultados);
-    kmRodadosController.addListener(calcularResultados);
-    horasTrabalhadasController.addListener(calcularResultados);
-    custoController.addListener(calcularResultados);
+  void dispose() {
+    _debounce?.cancel();
+    uberController.dispose();
+    novenoveController.dispose();
+    kmRodadosController.dispose();
+    horasTrabalhadasController.dispose();
+    custoController.dispose();
+    uberFocus.dispose();
+    novenoveFocus.dispose();
+    kmFocus.dispose();
+    horasFocus.dispose();
+    custoFocus.dispose();
+    super.dispose();
   }
+void _onInputChange() {
+  if (_debounce?.isActive ?? false) _debounce!.cancel();
+  _debounce = Timer(const Duration(milliseconds: 300), () {
+    calcularResultados();
+  });
+}
+
 
   void calcularResultados() {
     final double uber = _parseToDouble(uberController.text);
