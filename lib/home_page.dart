@@ -224,7 +224,6 @@ void _limparCampos() {
                   Expanded(child: _buildTextField(controller: novenoveController, label: '99 (R\$)', focusNode: novenoveFocus)),
                 ],
               ),
-              const SizedBox(height: 1),
               // Card para exibir o Ganho Total
               Card(
                 color: Colors.blue.shade100,
@@ -243,7 +242,7 @@ void _limparCampos() {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(child: _buildTextField(controller: kmRodadosController, label: 'Km Rodados', focusNode: kmFocus)),
