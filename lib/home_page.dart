@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uberonv1beta/database_helper.dart';
 import 'package:uberonv1beta/historico_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 class HomePage extends StatefulWidget {
@@ -10,36 +11,57 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // Campos de valor Uber e 99
   final TextEditingController uberController = TextEditingController();
   final TextEditingController novenoveController = TextEditingController();
+  // Campos para Km Rodados e Horas Trabalhadas
   final TextEditingController kmRodadosController = TextEditingController();
   final TextEditingController horasTrabalhadasController = TextEditingController();
-  final TextEditingController custoController = TextEditingController();
+  // Novos campos: Último Abastecimento e Média Atual do carro
+  final TextEditingController abastecimentoController = TextEditingController();
+  final TextEditingController mediaCarroController = TextEditingController();
 
+  // FocusNodes
   final FocusNode uberFocus = FocusNode();
   final FocusNode novenoveFocus = FocusNode();
   final FocusNode kmFocus = FocusNode();
   final FocusNode horasFocus = FocusNode();
-  final FocusNode custoFocus = FocusNode();
+  final FocusNode abastecimentoFocus = FocusNode();
+  final FocusNode mediaFocus = FocusNode();
 
+  // Variáveis de cálculo dos resultados
   double ganhoPorMinuto = 0.0;
   double ganhoPorKm = 0.0;
   double ganhoPorHora = 0.0;
   double ganhoLiquido = 0.0;
   double porcentagemLucro = 0.0;
   double ganhoTotal = 0.0;
+  
+  // Novas variáveis para o custo calculado
+  double custoTotal = 0.0;
+  double litrosGastosTotal = 0.0;
 
   Timer? _debounce; // Variável para debounce
 
- @override
-void initState() {
-  super.initState();
-  uberController.addListener(_onInputChange);
-  novenoveController.addListener(_onInputChange);
-  kmRodadosController.addListener(_onInputChange);
-  horasTrabalhadasController.addListener(_onInputChange);
-  custoController.addListener(_onInputChange);
-}
+  @override
+  void initState() {
+    super.initState();
+    uberController.addListener(_onInputChange);
+    novenoveController.addListener(_onInputChange);
+    kmRodadosController.addListener(_onInputChange);
+    horasTrabalhadasController.addListener(_onInputChange);
+    abastecimentoController.addListener(_onInputChange);
+    mediaCarroController.addListener(_onInputChange);
+
+    // Cache dos novos campos
+    abastecimentoController.addListener(() {
+      _cacheNewFieldValue("abastecimento", abastecimentoController.text);
+    });
+    mediaCarroController.addListener(() {
+      _cacheNewFieldValue("mediaCarro", mediaCarroController.text);
+    });
+    _loadCachedValues();
+  }
 
   @override
   void dispose() {
@@ -48,102 +70,124 @@ void initState() {
     novenoveController.dispose();
     kmRodadosController.dispose();
     horasTrabalhadasController.dispose();
-    custoController.dispose();
+    abastecimentoController.dispose();
+    mediaCarroController.dispose();
     uberFocus.dispose();
     novenoveFocus.dispose();
     kmFocus.dispose();
     horasFocus.dispose();
-    custoFocus.dispose();
+    abastecimentoFocus.dispose();
+    mediaFocus.dispose();
     super.dispose();
   }
-void _onInputChange() {
-  if (_debounce?.isActive ?? false) _debounce!.cancel();
-  _debounce = Timer(const Duration(milliseconds: 300), () {
-    calcularResultados();
-  });
-}
 
-void _resetarDados() {
-  Timer? autoResetTimer; // Declaração correta no escopo adequado
+  Future<void> _loadCachedValues() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? abastecimentoValue = prefs.getString("abastecimento");
+    final String? mediaCarroValue = prefs.getString("mediaCarro");
+    if (abastecimentoValue != null) {
+      abastecimentoController.text = abastecimentoValue;
+    }
+    if (mediaCarroValue != null) {
+      mediaCarroController.text = mediaCarroValue;
+    }
+  }
 
-  showDialog(
-    context: context,
-    builder: (context) {
-      int segundosRestantes = 5;
+  Future<void> _cacheNewFieldValue(String key, String value) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
 
-      return StatefulBuilder(
-        builder: (context, setState) {
-          // Inicializa o timer para atualização do botão
-          autoResetTimer ??= Timer.periodic(const Duration(seconds: 1), (timer) {
-            if (segundosRestantes > 1) {
-              if (!Navigator.of(context).canPop()) {
-                timer.cancel(); // Cancela o timer se o diálogo for fechado
+  void _onInputChange() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      calcularResultados();
+    });
+  }
+
+  void _resetarDados() {
+    Timer? autoResetTimer;
+    showDialog(
+      context: context,
+      builder: (context) {
+        int segundosRestantes = 5;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            autoResetTimer ??= Timer.periodic(const Duration(seconds: 1), (timer) {
+              if (segundosRestantes > 1) {
+                if (!Navigator.of(context).canPop()) {
+                  timer.cancel();
+                } else {
+                  setState(() => segundosRestantes--);
+                }
               } else {
-                setState(() => segundosRestantes--); // Atualiza o botão apenas se estiver montado
-              }
-            } else {
-              timer.cancel();
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop(); // Fecha o diálogo antes de resetar os dados
-              }
-              _limparCampos();
-            }
-          });
-
-          return AlertDialog(
-            title: Text("Confirmar Reset"),
-            content: Text("Tem certeza que deseja apagar os dados preenchidos?"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  autoResetTimer?.cancel(); // Cancela o timer para evitar erro
-                  Navigator.of(context).pop(); // Fecha o diálogo sem limpar os dados
-                },
-                child: Text("Cancelar"),
-              ),
-              TextButton(
-                onPressed: () {
-                  autoResetTimer?.cancel(); // Cancela o timer para evitar reset automático
+                timer.cancel();
+                if (Navigator.of(context).canPop()) {
                   Navigator.of(context).pop();
-                  _limparCampos();
-                },
-                child: Text("Sim ($segundosRestantes)"),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  ).then((_) {
-    // Garante que o timer seja cancelado ao fechar o diálogo de qualquer forma
-    autoResetTimer?.cancel();
-  });
-}
+                }
+                _limparCampos();
+              }
+            });
+            return AlertDialog(
+              title: Text("Confirmar Reset"),
+              content: Text("Tem certeza que deseja apagar os dados preenchidos?"),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    autoResetTimer?.cancel();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text("Cancelar"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    autoResetTimer?.cancel();
+                    Navigator.of(context).pop();
+                    _limparCampos();
+                  },
+                  child: Text("Sim ($segundosRestantes)"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      autoResetTimer?.cancel();
+    });
+  }
 
-/// Método para limpar os campos do formulário
-void _limparCampos() {
-  uberController.clear();
-  novenoveController.clear();
-  kmRodadosController.clear();
-  horasTrabalhadasController.clear();
-  custoController.clear();
-}
+  // Nota: Agora não limpamos os campos de abastecimento e média do carro
+  void _limparCampos() {
+    uberController.clear();
+    novenoveController.clear();
+    kmRodadosController.clear();
+    horasTrabalhadasController.clear();
+  }
 
   void calcularResultados() {
     final double uber = _parseToDouble(uberController.text);
     final double novenove = _parseToDouble(novenoveController.text);
     final double kmRodados = _parseToDouble(kmRodadosController.text);
     final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
-    final double custo = _parseToDouble(custoController.text);
+    final double valorAbastecimento = _parseToDouble(abastecimentoController.text);
+    final double mediaAtual = _parseToDouble(mediaCarroController.text);
 
     final double ganho = uber + novenove;
-
+    double litrosGastos = 0.0;
+    double custoCalculado = 0.0;
+    if (mediaAtual > 0) {
+      litrosGastos = kmRodados / mediaAtual;
+      custoCalculado = litrosGastos * valorAbastecimento;
+    }
     setState(() {
       ganhoTotal = ganho;
       ganhoPorKm = kmRodados > 0 ? ganho / kmRodados : 0.0;
       ganhoPorHora = horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0;
       ganhoPorMinuto = horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0;
-      ganhoLiquido = ganho - custo;
+      custoTotal = custoCalculado;
+      litrosGastosTotal = litrosGastos;
+      ganhoLiquido = ganho - custoCalculado;
       porcentagemLucro = ganho > 0 ? (ganhoLiquido / ganho) * 100 : 0.0;
     });
   }
@@ -156,37 +200,37 @@ void _limparCampos() {
   void _salvarHistorico() {
     final now = DateTime.now();
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-
-    final uber = _parseToDouble(uberController.text);
-    final novenove = _parseToDouble(novenoveController.text);
-    final kmRodados = _parseToDouble(kmRodadosController.text);
-    final horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
-    final custo = _parseToDouble(custoController.text);
-
-    final ganho = uber + novenove;
-
+    final double uber = _parseToDouble(uberController.text);
+    final double novenove = _parseToDouble(novenoveController.text);
+    final double kmRodados = _parseToDouble(kmRodadosController.text);
+    final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
+    final double valorAbastecimento = _parseToDouble(abastecimentoController.text);
+    final double mediaAtual = _parseToDouble(mediaCarroController.text);
+    double litrosGastos = 0.0;
+    double custoCalculado = 0.0;
+    if (mediaAtual > 0) {
+      litrosGastos = kmRodados / mediaAtual;
+      custoCalculado = litrosGastos * valorAbastecimento;
+    }
+    final double ganho = uber + novenove;
     final data = {
       'data': dateFormat.format(now),
       'valorUber': uber,
       'valor99': novenove,
       'kmRodados': kmRodados,
       'horasTrabalhadas': horasTrabalhadas,
-      'custo': custo,
+      'custo': custoCalculado,
       'ganho': ganho,
       'ganhoKm': kmRodados > 0 ? ganho / kmRodados : 0.0,
       'ganhoHora': horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0,
       'ganhoMinuto': horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0,
-      'ganhoLiquido': ganho - custo,
+      'ganhoLiquido': ganho - custoCalculado,
     };
-
     DatabaseHelper().inserirHistorico(data);
-
     uberController.clear();
     novenoveController.clear();
     kmRodadosController.clear();
     horasTrabalhadasController.clear();
-    custoController.clear();
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Dados salvos no histórico!')),
     );
@@ -212,15 +256,17 @@ void _limparCampos() {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(8.0), // Reduzi a margem geral
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Linha para Uber e 99
+              // Linha para Uber e 99 (permanece inalterada)
               Row(
                 children: [
                   Expanded(child: _buildTextField(controller: uberController, label: 'Uber (R\$)', focusNode: uberFocus)),
-                  SizedBox(width: 16),
+                  SizedBox(width: 8),
                   Expanded(child: _buildTextField(controller: novenoveController, label: '99 (R\$)', focusNode: novenoveFocus)),
                 ],
               ),
@@ -230,11 +276,11 @@ void _limparCampos() {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 4,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
                   child: Center(
                     child: Text(
                       'Ganho Total: R\$ ${ganhoTotal.toStringAsFixed(2)}',
-                      style: textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.blue[900],
                       ),
@@ -242,20 +288,31 @@ void _limparCampos() {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12), // Espaço aumentado abaixo do card de Ganho Total
+              // Linha para Km Rodados e Horas Trabalhadas
               Row(
                 children: [
                   Expanded(child: _buildTextField(controller: kmRodadosController, label: 'Km Rodados', focusNode: kmFocus)),
-                  SizedBox(width: 16),
+                  SizedBox(width: 16), // Espaçamento aumentado de 8 para 16
                   Expanded(child: _buildTextField(controller: horasTrabalhadasController, label: 'Horas Trabalhadas', focusNode: horasFocus)),
                 ],
               ),
-              const SizedBox(height: 1),
-              _buildTextField(controller: custoController, label: 'Custo (R\$)', focusNode: custoFocus),
-              const SizedBox(height: 1),
+              const SizedBox(height: 8),
+              // Linha para os novos campos: Último Abastecimento e Média Atual
+              Row(
+                children: [
+                  Expanded(child: _buildTextField(controller: abastecimentoController, label: 'Último Abastecimento (R\$)', focusNode: abastecimentoFocus)),
+                  SizedBox(width: 16), // Espaçamento aumentado aqui também
+                  Expanded(child: _buildTextField(controller: mediaCarroController, label: 'Média Atual (Km/L)', focusNode: mediaFocus)),
+                ],
+              ),
+              const SizedBox(height: 2),
+              // Wrap para os cards dos resultados com centralização
               Wrap(
-                spacing: 16,
-                runSpacing: 16,
+                alignment: WrapAlignment.center,  // Centraliza horizontalmente
+                runAlignment: WrapAlignment.center, // Centraliza as linhas
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _buildResultadoCard('Ganho por Minuto', ganhoPorMinuto),
                   _buildResultadoCard('Ganho por Km', ganhoPorKm),
@@ -263,25 +320,57 @@ void _limparCampos() {
                   _buildResultadoCard('Ganho Líquido', ganhoLiquido, isLiquido: true),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
+              // Card para exibir o custo calculado e os litros gastos (altura reduzida)
+              Card(
+                color: Colors.orange.shade100,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Custo: R\$ ${custoTotal.toStringAsFixed(2)}',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange[900],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '(${litrosGastosTotal.toStringAsFixed(2)} Litros)',
+                          style: textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.orange[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
               ElevatedButton.icon(
                 onPressed: _salvarHistorico,
                 icon: Icon(Icons.save),
                 label: Text('Salvar no Histórico'),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   textStyle: TextStyle(fontSize: 16),
                 ),
               ),
-              const SizedBox(height: 8), // Espaço entre os botões
+              const SizedBox(height: 4),
               ElevatedButton.icon(
                 onPressed: _resetarDados,
                 icon: Icon(Icons.refresh),
                 label: Text("Resetar Dados"),
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  padding: EdgeInsets.symmetric(vertical: 12),
                   textStyle: TextStyle(fontSize: 16),
-                  backgroundColor: const Color.fromARGB(255, 247, 223, 10), // Cor para destacar o reset
+                  backgroundColor: Color.fromARGB(255, 247, 223, 10),
                 ),
               ),
             ],
@@ -297,7 +386,7 @@ void _limparCampos() {
     required FocusNode focusNode,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.only(bottom: 8.0), // Reduzimos o espaçamento inferior
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -314,7 +403,6 @@ void _limparCampos() {
   Widget _buildResultadoCard(String titulo, double valor, {bool isLiquido = false}) {
     Color corFundo;
     Color corTexto;
-
     if (valor == 0.0) {
       corFundo = Colors.blue.shade100;
       corTexto = Colors.blue;
@@ -373,7 +461,6 @@ void _limparCampos() {
           corTexto = Colors.black;
       }
     }
-
     return SizedBox(
       width: (MediaQuery.of(context).size.width - 48) / 2,
       child: Card(
@@ -381,18 +468,24 @@ void _limparCampos() {
         elevation: 4,
         color: corFundo,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 titulo,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: Theme.of(context)
+                    .textTheme
+                    .labelMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 2),
               Text(
                 'R\$ ${valor.toStringAsFixed(2)}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: corTexto),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: corTexto),
               ),
             ],
           ),
