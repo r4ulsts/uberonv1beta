@@ -41,6 +41,13 @@ class _HomePageState extends State<HomePage> {
   double custoTotal = 0.0;
   double litrosGastosTotal = 0.0;
 
+    // Variáveis para armazenar os últimos valores inseridos
+  String? lastUber;
+  String? lastNovenove;
+  String? lastKmRodados;
+  String? lastHorasTrabalhadas;
+
+
   Timer? _debounce; // Variável para debounce
 
   @override
@@ -52,6 +59,12 @@ class _HomePageState extends State<HomePage> {
     horasTrabalhadasController.addListener(_onInputChange);
     abastecimentoController.addListener(_onInputChange);
     mediaCarroController.addListener(_onInputChange);
+    _loadLastValues(); // Agora carregamos os valores ao iniciar a tela
+
+    Future<void> _cacheNewFieldValue(String key, String value) async {
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.setString(key, value);
+}
 
     // Cache dos novos campos
     abastecimentoController.addListener(() {
@@ -92,11 +105,25 @@ class _HomePageState extends State<HomePage> {
       mediaCarroController.text = mediaCarroValue;
     }
   }
+    Future<void> _loadLastValues() async {
+      final prefs = await SharedPreferences.getInstance();
 
-  Future<void> _cacheNewFieldValue(String key, String value) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, value);
-  }
+      final String? savedUber = prefs.getString('lastUber');
+      final String? savedNovenove = prefs.getString('lastNovenove');
+
+      setState(() {
+        lastUber = savedUber != null && !savedUber.startsWith('Último: R\$') 
+            ? 'Último: R\$${savedUber}' 
+            : savedUber ?? 'Digite o valor da Uber';
+
+        lastNovenove = savedNovenove != null && !savedNovenove.startsWith('Último: R\$') 
+            ? 'Último: R\$${savedNovenove}' 
+            : savedNovenove ?? 'Digite o valor do 99';
+
+        lastKmRodados = prefs.getString('lastKmRodados') ?? 'Digite o Km rodado';
+        lastHorasTrabalhadas = prefs.getString('lastHorasTrabalhadas') ?? 'Digite as horas trabalhadas';
+      });
+    }
 
   void _onInputChange() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -196,46 +223,69 @@ class _HomePageState extends State<HomePage> {
     value = value.replaceAll(',', '.');
     return double.tryParse(value) ?? 0.0;
   }
+void _salvarHistorico() async {
+  final now = DateTime.now();
+  final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+  final prefs = await SharedPreferences.getInstance();
 
-  void _salvarHistorico() {
-    final now = DateTime.now();
-    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
-    final double uber = _parseToDouble(uberController.text);
-    final double novenove = _parseToDouble(novenoveController.text);
-    final double kmRodados = _parseToDouble(kmRodadosController.text);
-    final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
-    final double valorAbastecimento = _parseToDouble(abastecimentoController.text);
-    final double mediaAtual = _parseToDouble(mediaCarroController.text);
-    double litrosGastos = 0.0;
-    double custoCalculado = 0.0;
-    if (mediaAtual > 0) {
-      litrosGastos = kmRodados / mediaAtual;
-      custoCalculado = litrosGastos * valorAbastecimento;
-    }
-    final double ganho = uber + novenove;
-    final data = {
-      'data': dateFormat.format(now),
-      'valorUber': uber,
-      'valor99': novenove,
-      'kmRodados': kmRodados,
-      'horasTrabalhadas': horasTrabalhadas,
-      'custo': custoCalculado,
-      'ganho': ganho,
-      'ganhoKm': kmRodados > 0 ? ganho / kmRodados : 0.0,
-      'ganhoHora': horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0,
-      'ganhoMinuto': horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0,
-      'ganhoLiquido': ganho - custoCalculado,
-    };
-    DatabaseHelper().inserirHistorico(data);
-    uberController.clear();
-    novenoveController.clear();
-    kmRodadosController.clear();
-    horasTrabalhadasController.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Dados salvos no histórico!')),
-    );
+  final double uber = _parseToDouble(uberController.text);
+  final double novenove = _parseToDouble(novenoveController.text);
+  final double kmRodados = _parseToDouble(kmRodadosController.text);
+  final double horasTrabalhadas = _parseToDouble(horasTrabalhadasController.text);
+  final double valorAbastecimento = _parseToDouble(abastecimentoController.text);
+  final double mediaAtual = _parseToDouble(mediaCarroController.text);
+
+  double litrosGastos = 0.0;
+  double custoCalculado = 0.0;
+
+  if (mediaAtual > 0) {
+    litrosGastos = kmRodados / mediaAtual;
+    custoCalculado = litrosGastos * valorAbastecimento;
   }
 
+  final double ganho = uber + novenove;
+
+  final data = {
+    'data': dateFormat.format(now),
+    'valorUber': uber,
+    'valor99': novenove,
+    'kmRodados': kmRodados,
+    'horasTrabalhadas': horasTrabalhadas,
+    'custo': custoCalculado,
+    'ganho': ganho,
+    'ganhoKm': kmRodados > 0 ? ganho / kmRodados : 0.0,
+    'ganhoHora': horasTrabalhadas > 0 ? ganho / horasTrabalhadas : 0.0,
+    'ganhoMinuto': horasTrabalhadas > 0 ? ganho / (horasTrabalhadas * 60) : 0.0,
+    'ganhoLiquido': ganho - custoCalculado,
+  };
+
+  DatabaseHelper().inserirHistorico(data);
+
+  // **Salvar os últimos valores inseridos nos campos Uber, 99, Km Rodados e Horas Trabalhadas**
+  final formatador = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+  await prefs.setString('lastUber', 'Último: ${formatador.format(uber)}');
+  await prefs.setString('lastNovenove', 'Último: ${formatador.format(novenove)}');
+  await prefs.setString('lastKmRodados', kmRodadosController.text);
+  await prefs.setString('lastHorasTrabalhadas', horasTrabalhadasController.text);
+
+  // **Atualizar os placeholders dos campos com os últimos valores**
+  setState(() {
+    lastUber = uberController.text;
+    lastNovenove = novenoveController.text;
+    lastKmRodados = kmRodadosController.text;
+    lastHorasTrabalhadas = horasTrabalhadasController.text;
+  });
+
+  // **Limpar os campos de entrada**
+  uberController.clear();
+  novenoveController.clear();
+  kmRodadosController.clear();
+  horasTrabalhadasController.clear();
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Dados salvos no histórico!')),
+  );
+}
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -265,11 +315,26 @@ class _HomePageState extends State<HomePage> {
               // Linha para Uber e 99 (permanece inalterada)
               Row(
                 children: [
-                  Expanded(child: _buildTextField(controller: uberController, label: 'Uber (R\$)', focusNode: uberFocus)),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: uberController,
+                      label: 'Uber (R\$)',
+                      focusNode: uberFocus,
+                      hintText: lastUber ?? 'Digite o valor da Uber', // Agora usando o último valor salvo!
+                    ),
+                  ),
                   SizedBox(width: 8),
-                  Expanded(child: _buildTextField(controller: novenoveController, label: '99 (R\$)', focusNode: novenoveFocus)),
+                  Expanded(
+                    child: _buildTextField(
+                      controller: novenoveController,
+                      label: '99 (R\$)',
+                      focusNode: novenoveFocus,
+                      hintText: lastNovenove ?? 'Digite o valor do 99', // Recuperando último valor salvo!
+                    ),
+                  ),
                 ],
               ),
+
               // Card para exibir o Ganho Total
               Card(
                 color: Colors.blue.shade100,
@@ -384,9 +449,10 @@ class _HomePageState extends State<HomePage> {
     required TextEditingController controller,
     required String label,
     required FocusNode focusNode,
+    String? hintText, // Adicionando o parâmetro opcional
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0), // Reduzimos o espaçamento inferior
+      padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -394,6 +460,7 @@ class _HomePageState extends State<HomePage> {
         textInputAction: TextInputAction.next,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hintText, // Agora passamos a dica corretamente
           border: OutlineInputBorder(),
         ),
       ),
